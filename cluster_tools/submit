@@ -1,0 +1,209 @@
+#!/usr/bin/env python3
+
+import os.path
+import json
+import click
+import uuid
+import invoke
+from getpass import getpass
+from fabric import Connection
+from pack import pack
+from time import sleep
+from colorama import Style, Fore
+import tarfile
+from types import SimpleNamespace as Namespace
+
+def setup_python(conn, python, venv):
+  """ setup python virtual environment at venv_dir
+      with python binary at python_bin
+  """
+  # If no virtual env exists, create one
+  if not os.path.isfile(f"{venv}/bin/activate"):
+    conn.run(f"{python} -m venv {venv}")
+
+  # install the requirements
+  with conn.prefix(f"source {venv}/bin/activate"):
+    conn.run("pip install -r requirements.txt")
+
+
+def put(conn, local, remote):
+  """ scp the local file to the remote path
+  """
+  conn.put(local, remote)
+
+
+def untar(conn, tarball, path):
+  """ untar the remote file to the path
+  """
+  conn.run(f"tar xf {tarball} -C {path}")
+
+
+def sbatch_script(conn, options, commands, sbatch_script_name, verbose=True):
+  options.update({
+      "--output": "slurm.out",
+      "--error": "slurm.err",
+  })
+  def print_if_verbose(*args, **kwargs):
+    if verbose:
+      print(*args, **kwargs)
+  with open(sbatch_script_name, "w") as f:
+    f.write("#!/bin/bash\n")
+    for k, v in options.items():
+      f.write(f"#SBATCH {k} {v}\n")
+    for command in commands:
+      f.write(f"{command}\n")
+  with open(sbatch_script_name, "r") as f:
+    print_if_verbose(f"{Fore.CYAN}==== SBATCH SCRIPT ====\n")
+    print_if_verbose(f.read() + f"{Style.RESET_ALL}")
+
+
+def sbatch(conn):
+  """ run sbatch with options and submit the command
+  """
+  sbatch_script_name = "./sbatch_script.sh"
+  job_id = conn.run(f"sbatch {sbatch_script_name}").stdout.rsplit(None, 1)[-1]
+  def check_state(prev_state):
+    try:
+      state, reason = conn.run(
+          f"squeue -j {job_id} -O state,reason -h", hide=True).stdout.split()
+    except:
+      state = conn.run(f"sacct -j {job_id} --format=state | head -1",
+                       hide=True).stdout.strip()
+      reason = None
+    if state == "PENDING":
+      if prev_state != state:
+        print(f"{Fore.CYAN}PENDING({reason}){Style.RESET_ALL}")
+        return state
+    elif state == "RUNNING":
+      if prev_state != state:
+        print(f"{Fore.CYAN}RUNNING{Style.RESET_ALL}")
+        return state
+    elif state == "FAILED":
+      if prev_state != state:
+        print(f"{Fore.RED}FAILED({reason}){Style.RESET_ALL}")
+        return state
+    else:
+      return state
+
+  state = None
+  while True:
+    state = check_state(prev_state=state)
+    if state == "RUNNING":
+      node = conn.run(f"squeue -j {job_id} -O nodelist -h",
+                      hide=True).stdout.strip()
+      return node, job_id
+    elif state == "FAILED":
+      stdout = conn.run("cat slurm.out").stdout
+      stderr = conn.run("cat slurm.err").stdout
+      print(f"{Fore.RED}stdout{Style.RESET_ALL}")
+      print(stdout)
+      print(f"{Fore.RED}stderr{Style.RESET_ALL}")
+      print(stderr)
+      return None, job_id
+    elif state == "PENDING":
+      continue
+    else:
+      print(state)
+      return None, job_id
+
+
+@click.command(context_settings=dict(
+    ignore_unknown_options=True,
+))
+@click.option('-c', type=click.Path(exists=True), help="submit config to use")
+@click.option('--sbatch_json', type=str, default="{}",
+              help="extra json string to pass sbatch arguments")
+@click.option('--tensorboard', is_flag=True, default=True)
+@click.argument('command', nargs=-1, type=click.UNPROCESSED)
+def submit(c, sbatch_json, tensorboard, command):
+  with open(click.format_filename(c), "r") as f:
+    config = json.load(f, object_hook=lambda d: Namespace(**d))
+
+  # create a connection to the remote machine.
+  # from which the job will be submitted.
+  password = getpass(f"Password for {config.hostname}: ")
+  if password:
+    conn = Connection(config.hostname, connect_kwargs={"password": password})
+  else:
+    conn = Connection(config.hostname)
+  if conn.is_connected:
+    print(f"Connection to {Fore.CYAN}{config.hostname}{Style.RESET_ALL} established")
+
+  # pack a tar ball for the current working directory
+  # create a dirty branch for the current working tree
+  # if the repo is not clean
+  tarball, relative_dir = pack()
+  assert tarball.endswith(".tar")
+  prefix = tarball[:-4]
+  print(f"Tarball {Fore.CYAN}{tarball}{Style.RESET_ALL} created for the current repo")
+
+  # prepare sbatch script and add to the tarball
+  # TODO: in the future keep track of the sbatch commands with git
+  options = {}
+  options.update(config.sbatch_options.__dict__)
+  if os.path.isfile("./sbatch.json"):
+    with open("./sbatch.json") as f:
+      extra_options = json.load(f)
+      options.update(extra_options)
+  # Load extra sbatch options from command line
+  extra_options = json.loads(sbatch_json)
+  options.update(extra_options)
+  # prepare the commands
+  command = " ".join(command)
+  tensorboard_cmd = [
+      """PORT=$(python -c 'import socket; s=socket.socket(socket.AF_INET, socket.SOCK_STREAM); s.bind(("localhost",0)); print(s.getsockname()[1])')""",
+      "echo $PORT > tensorboard.port",
+      "tensorboard --logdir ./ --port $PORT &",
+  ]
+  commands = [
+      f"source {config.venv}/bin/activate",
+      *tensorboard_cmd,
+      command,
+  ]
+  # create sbatch file
+  sbatch_script_name = f"/tmp/{uuid.uuid4().hex}"
+  sbatch_script(conn, options, commands, sbatch_script_name, verbose=True)
+  archive = tarfile.open(f"{tarball}", "a")
+  archive.add(sbatch_script_name, arcname=f"{prefix}/{relative_dir}/sbatch_script.sh")
+  archive.close()
+
+  # copy the tarball created to the destination directory
+  # on the remote machine
+  print(f"Uploading {Fore.CYAN}{tarball}{Style.RESET_ALL} to {Fore.CYAN}{config.hostname}:{config.tar_path}/{tarball}{Style.RESET_ALL}")
+  put(conn, tarball, f"{config.tar_path}/{tarball}")
+  print("Upload successful")
+
+  # untar the tarball on the remote machine to the
+  # specified directory
+  untar(conn, f"{config.tar_path}/{tarball}", config.untar_path)
+  print(f"Extracted to {Fore.CYAN}{config.untar_path}/{prefix}{Style.RESET_ALL}")
+
+  # go to the untared dir
+  # and execute the command
+  with conn.cd(f"{config.untar_path}/{prefix}"):
+    with conn.prefix("source $HOME/.bashrc"):
+      setup_python(conn, config.python, config.venv)
+      # launch the sbatch command
+      node, job_id = sbatch(conn)
+      if not node:
+        return
+      # launch tensorboard
+      while True:
+        try:
+          port = conn.run("cat tensorboard.port", hide=True).stdout.strip()
+          break
+        except:
+          sleep(2)
+
+      print(f"Tensorboard at port {port}")
+      conn.close()
+      port_forwarding = f"ssh -J linmin@cedar.computecanada.ca -N -f -L localhost:{port}:localhost:{port} linmin@{node}"
+      print(f"Running port forwarding script {Fore.CYAN}{port_forwarding}{Style.RESET_ALL}")
+      print(f"Link to tensorboard {Fore.CYAN}http://localhost:{port}{Style.RESET_ALL}")
+      print(f"{Fore.CYAN}Ctrl-C to terminate port forwarding{Style.RESET_ALL}")
+      context = invoke.Context()
+      context.run(port_forwarding)
+
+
+if __name__ == "__main__":
+  submit()

@@ -1,0 +1,13 @@
+{
+    "hostname": "elisa1.iro.umontreal.ca",
+    "python": "/",
+    "venv": "$HOME/default_venv",
+    "tar_path": "/data/milatmp1/$USER/run/tar/",
+    "untar_path": "/data/milatmp1/$USER/run/untar",
+    "sbatch_options": {
+	"--gres": "gpu:titanxp",
+	"--mem": "12000G",
+	"-c": "4",
+	"--qos": "unkillable"
+    }
+}
