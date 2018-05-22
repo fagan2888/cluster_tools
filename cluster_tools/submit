@@ -110,11 +110,12 @@ def sbatch(conn):
 @click.command(context_settings=dict(
     ignore_unknown_options=True,
 ))
-@click.option('-c', type=click.Path(exists=True), help="submit config to use")
+@click.option('-c', type=click.Path(exists=True),
+              required=True, help="submit config to use")
 @click.option('--sbatch_json', type=str, default="{}",
               help="extra json string to pass sbatch arguments")
 @click.option('--tensorboard', is_flag=True, default=True)
-@click.argument('command', nargs=-1, type=click.UNPROCESSED)
+@click.argument('command', nargs=-1, type=click.UNPROCESSED, required=True)
 def submit(c, sbatch_json, tensorboard, command):
   with open(click.format_filename(c), "r") as f:
     config = json.load(f, object_hook=lambda d: Namespace(**d))
