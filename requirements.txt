@@ -1,0 +1,6 @@
+uuid
+getpass
+click
+invoke
+fabric
+colorama

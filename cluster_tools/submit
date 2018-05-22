@@ -7,7 +7,7 @@ import uuid
 import invoke
 from getpass import getpass
 from fabric import Connection
-from pack import pack
+from cluster_tools.pack import pack
 from time import sleep
 from colorama import Style, Fore
 import tarfile
