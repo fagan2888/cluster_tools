@@ -1,0 +1,13 @@
+{
+    "hostname": "cedar.computecanada.ca",
+    "python": "/cvmfs/soft.computecanada.ca/nix/var/nix/profiles/python-3.5.2/bin/python",
+    "venv": "$HOME/default_venv",
+    "tar_path": "/home/linmin/project/run/tar",
+    "untar_path": "/home/linmin/project/run/untar",
+    "sbatch_options": {
+	"--gres": "gpu:1",
+	"--mem": "12G",
+	"-c": "4",
+	"--account": "rpp-bengioy"
+    }
+}
