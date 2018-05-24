@@ -1,5 +1,6 @@
 {
     "hostname": "cedar.computecanada.ca",
+    "user": "linmin",
     "python": "/cvmfs/soft.computecanada.ca/nix/var/nix/profiles/python-3.5.2/bin/python",
     "venv": "$HOME/default_venv",
     "tar_path": "/home/linmin/project/run/tar",
