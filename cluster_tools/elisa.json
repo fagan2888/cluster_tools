@@ -1,13 +1,13 @@
 {
     "hostname": "elisa1.iro.umontreal.ca",
-    "python": "/",
+    "python": "/opt/lisa/os_v5/anaconda/envs/uptodate_py36/bin/python",
     "venv": "$HOME/default_venv",
-    "tar_path": "/data/milatmp1/$USER/run/tar/",
-    "untar_path": "/data/milatmp1/$USER/run/untar",
+    "tar_path": "/data/milatmp1/linmin/run/tar/",
+    "untar_path": "/data/milatmp1/linmin/run/untar",
     "sbatch_options": {
 	"--gres": "gpu:titanxp",
-	"--mem": "12000G",
+	"--mem": "10000G",
 	"-c": "4",
-	"--qos": "unkillable"
+	"--qos": "high"
     }
 }
