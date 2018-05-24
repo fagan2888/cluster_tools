@@ -17,11 +17,7 @@ def setup_python(conn, python, venv):
   """ setup python virtual environment at venv_dir
       with python binary at python_bin
   """
-  # If no virtual env exists, create one
-  venv = os.path.expandvars(venv)
-  if not os.path.isfile(f"{venv}/bin/activate"):
-    conn.run(f"{python} -m venv {venv}")
-
+  pass
 
 def put(conn, local, remote):
   """ scp the local file to the remote path
@@ -148,6 +144,10 @@ def submit(c, sbatch_json, tensorboard, command):
   options.update(extra_options)
   # prepare the commands
   command = " ".join(command)
+  setup_venv = [
+      f"if [ ! -f {config.venv}/bin/activate ]; then {config.python} -m venv {config.venv}; fi",
+      f"source {config.venv}/bin/activate",
+  ]
   install_dependency = [
       "pip install -r requirements.txt",
   ]
@@ -157,7 +157,7 @@ def submit(c, sbatch_json, tensorboard, command):
       "tensorboard --logdir ./ --port $PORT &",
   ]
   commands = [
-      f"source {config.venv}/bin/activate",
+      *setup_venv,
       *install_dependency,
       *tensorboard_cmd,
       command,
