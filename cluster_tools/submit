@@ -198,7 +198,7 @@ def submit(c, sbatch_json, tensorboard, command):
 
       print(f"Tensorboard at port {port}")
       conn.close()
-      port_forwarding = f"ssh -J linmin@cedar.computecanada.ca -N -f -L localhost:{port}:localhost:{port} linmin@{node}"
+      port_forwarding = f"ssh -o 'StrictHostKeyChecking=no' -o 'UserKnownHostsFile=/dev/null' -J linmin@cedar.computecanada.ca -N -f -L localhost:{port}:localhost:{port} linmin@{node}"
       print(f"Running port forwarding script {Fore.CYAN}{port_forwarding}{Style.RESET_ALL}")
       print(f"Link to tensorboard {Fore.CYAN}http://localhost:{port}{Style.RESET_ALL}")
       print(f"{Fore.CYAN}Ctrl-C to terminate port forwarding{Style.RESET_ALL}")
