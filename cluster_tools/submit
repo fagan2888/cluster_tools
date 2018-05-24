@@ -18,6 +18,7 @@ def setup_python(conn, python, venv):
       with python binary at python_bin
   """
   # If no virtual env exists, create one
+  venv = os.path.expandvars(venv)
   if not os.path.isfile(f"{venv}/bin/activate"):
     conn.run(f"{python} -m venv {venv}")
 
