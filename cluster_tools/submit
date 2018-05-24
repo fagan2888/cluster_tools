@@ -73,17 +73,16 @@ def sbatch(conn):
     if state == "PENDING":
       if prev_state != state:
         print(f"{Fore.CYAN}PENDING({reason}){Style.RESET_ALL}")
-        return state
     elif state == "RUNNING":
       if prev_state != state:
         print(f"{Fore.CYAN}RUNNING{Style.RESET_ALL}")
-        return state
     elif state == "FAILED":
       if prev_state != state:
         print(f"{Fore.RED}FAILED({reason}){Style.RESET_ALL}")
-        return state
     else:
-      return state
+      if prev_state != state:
+        print(f"{Fore.RED}{state}({reason}){Style.RESET_ALL}")
+    return state
 
   state = None
   while True:
