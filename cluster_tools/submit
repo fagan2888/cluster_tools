@@ -13,12 +13,6 @@ from colorama import Style, Fore
 import tarfile
 from types import SimpleNamespace as Namespace
 
-def setup_python(conn, python, venv):
-  """ setup python virtual environment at venv_dir
-      with python binary at python_bin
-  """
-  pass
-
 def put(conn, local, remote):
   """ scp the local file to the remote path
   """
@@ -144,9 +138,8 @@ def submit(c, sbatch_json, tensorboard, command):
   options.update(extra_options)
   # prepare the commands
   command = " ".join(command)
-  setup_venv = [
-      f"if [ ! -f {config.venv}/bin/activate ]; then {config.python} -m venv {config.venv}; fi",
-      f"source {config.venv}/bin/activate",
+  setup_python = [
+      config.activate_python,
   ]
   install_dependency = [
       "pip install -r requirements.txt",
@@ -157,7 +150,7 @@ def submit(c, sbatch_json, tensorboard, command):
       "tensorboard --logdir ./ --port $PORT &",
   ]
   commands = [
-      *setup_venv,
+      *setup_python,
       *install_dependency,
       *tensorboard_cmd,
       command,
@@ -184,7 +177,6 @@ def submit(c, sbatch_json, tensorboard, command):
   # and execute the command
   with conn.cd(f"{config.untar_path}/{prefix}"):
     with conn.prefix("source $HOME/.bashrc"):
-      setup_python(conn, config.python, config.venv)
       # launch the sbatch command
       node, job_id = sbatch(conn)
       if not node:
