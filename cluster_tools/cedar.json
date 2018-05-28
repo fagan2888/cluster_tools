@@ -2,6 +2,7 @@
     "hostname": "cedar.computecanada.ca",
     "user": "linmin",
     "activate_python": "source $HOME/default_venv/bin/activate",
+    "ssh_key": "$HOME/.ssh/id_rsa",
     "tar_path": "/home/linmin/project/run/tar",
     "untar_path": "/home/linmin/project/run/untar",
     "sbatch_options": {

@@ -111,9 +111,11 @@ def submit(c, sbatch_json, tensorboard, command):
   # from which the job will be submitted.
   password = getpass(f"Password for {config.hostname}: ")
   if password:
-    conn = Connection(config.hostname, connect_kwargs={"password": password})
+    conn = Connection(config.hostname, user=config.user, connect_kwargs={"password": password})
+  elif hasattr(config, "ssh_key"):
+    conn = Connection(config.hostname, user=config.user, connect_kwargs={"key_filename": config.ssh_key})
   else:
-    conn = Connection(config.hostname)
+    conn = Connection(config.hostname, user=config.user)
   if conn.is_connected:
     print(f"Connection to {Fore.CYAN}{config.hostname}{Style.RESET_ALL} established")
 
@@ -187,11 +189,14 @@ def submit(c, sbatch_json, tensorboard, command):
           port = conn.run("cat tensorboard.port", hide=True).stdout.strip()
           break
         except:
-          sleep(2)
+          sleep(5)
 
       print(f"Tensorboard at port {port}")
       conn.close()
-      port_forwarding = f"ssh -o 'StrictHostKeyChecking=no' -o 'UserKnownHostsFile=/dev/null' -J {config.user}@{config.hostname} -N -f -L localhost:{port}:localhost:{port} {config.user}@{node}"
+      ssh_key_option = ""
+      if hasattr(config, "ssh_key"):
+        ssh_key_option = f"-i {config.ssh_key}"
+      port_forwarding = f"ssh -o 'StrictHostKeyChecking=no' -o 'UserKnownHostsFile=/dev/null' {ssh_key_option} -J {config.user}@{config.hostname} -N -f -L localhost:{port}:localhost:{port} {config.user}@{node}"
       print(f"Running port forwarding script {Fore.CYAN}{port_forwarding}{Style.RESET_ALL}")
       print(f"Link to tensorboard {Fore.CYAN}http://localhost:{port}{Style.RESET_ALL}")
       print(f"{Fore.CYAN}Ctrl-C to terminate port forwarding{Style.RESET_ALL}")
