@@ -12,16 +12,16 @@ def pack(name, branch):
   branch_name = repo.active_branch.name
   if branch:
     branch_name = branch
-  relative_dir = repo.git.rev_parse(show_prefix=True)
+  exec_path = repo.git.rev_parse(show_prefix=True)
   if len(diff) > 0:
     repo.git.add('-u')
     repo.index.commit(f"[dirty] commit {timestamp}")
     ckpt_branch_name = f"{branch_name}.dirty/{timestamp}"
     tar_name = f"{name}-{branch_name}.dirty-{timestamp}"
     dirty_branch = repo.create_head(ckpt_branch_name, 'HEAD')
-    prefix = f"{name}/{branch_name}.dirty/{timestamp}/"
+    prefix = f"{name}/{branch_name}.dirty/{timestamp}"
     with open(f"{tar_name}.tar", "wb") as f:
-      repo.archive(f, format="tar", prefix=prefix)
+      repo.archive(f, format="tar", prefix=f"{prefix}/")
     repo.head.reset("HEAD~1")
   else:
     sha = repo.git.rev_parse("HEAD", short=True)
@@ -29,12 +29,11 @@ def pack(name, branch):
       ckpt_branch_name = f"{branch_name}.{sha}/{timestamp}"
       repo.create_head(branch_name, 'HEAD')
     tar_name = f"{name}-{branch_name}.{sha}-{timestamp}"
-    prefix = f"{name}/{branch_name}.{sha}/{timestamp}/"
+    prefix = f"{name}/{branch_name}.{sha}/{timestamp}"
     with open(f"{tar_name}.tar", "wb") as f:
-      repo.archive(f, format="tar", prefix=prefix)
+      repo.archive(f, format="tar", prefix=f"{prefix}/")
 
-  prefix += relative_dir
-  return f"{tar_name}.tar", prefix
+  return f"{tar_name}.tar", prefix, exec_path
 
 if __name__ == "__main__":
   print(pack())

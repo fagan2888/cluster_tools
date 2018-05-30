@@ -128,7 +128,7 @@ def submit(c, name, branch, sbatch_json, tensorboard, command):
   # pack a tar ball for the current working directory
   # create a dirty branch for the current working tree
   # if the repo is not clean
-  tarball, prefix = pack(name, branch)
+  tarball, prefix, exec_path = pack(name, branch)
   assert tarball.endswith(".tar")
   logging.info(f"Tarball {Fore.CYAN}{tarball}{Style.RESET_ALL} created for the current repo")
 
@@ -166,7 +166,7 @@ def submit(c, name, branch, sbatch_json, tensorboard, command):
   sbatch_script_name = f"/tmp/{uuid.uuid4().hex}"
   sbatch_script(conn, options, commands, sbatch_script_name, verbose=True)
   archive = tarfile.open(f"{tarball}", "a")
-  archive.add(sbatch_script_name, arcname=f"{prefix}/sbatch_script.sh")
+  archive.add(sbatch_script_name, arcname=f"{prefix}/{exec_path}/sbatch_script.sh")
   archive.close()
 
   # copy the tarball created to the destination directory
@@ -188,7 +188,7 @@ def submit(c, name, branch, sbatch_json, tensorboard, command):
 
   # go to the untared dir
   # and execute the command
-  with conn.cd(f"{config.untar_path}/{prefix}"):
+  with conn.cd(f"{config.untar_path}/{prefix}/{exec_path}"):
     with conn.prefix("source $HOME/.bashrc"):
       # launch the sbatch command
       node, job_id = sbatch(conn)
@@ -209,7 +209,7 @@ def submit(c, name, branch, sbatch_json, tensorboard, command):
           logging.info(f"Link to tensorboard {Fore.CYAN}http://localhost:{port}{Style.RESET_ALL}")
           logging.info(f"{Fore.CYAN}Ctrl-C to terminate port forwarding{Style.RESET_ALL}")
           logging.info("Now forwarding the job output to terminal")
-          conn.run(f"tail -f {config.untar_path}/{prefix}/slurm.err -f {config.untar_path}/{prefix}/slurm.out")
+          conn.run(f"tail -f {config.untar_path}/{prefix}/{exec_path}/slurm.err -f {config.untar_path}/{prefix}/{exec_path}/slurm.out")
       except KeyboardInterrupt:
         os.system("stty sane")
         logging.info("Disconnecting from remote tensorboard")
