@@ -7,13 +7,13 @@ import json
 import click
 import uuid
 import invoke
-from getpass import getpass
 from fabric import Connection
 from cluster_tools.pack import pack
 from time import sleep
 from colorama import Style, Fore
 import tarfile
 from types import SimpleNamespace as Namespace
+from cluster_tools.connection import connect_entry_node
 
 def untar(conn, tarball, path):
   """ untar the remote file to the path
@@ -107,23 +107,7 @@ def submit(c, name, branch, sbatch_json, tensorboard, command):
 
   # create a connection to the remote machine.
   # from which the job will be submitted.
-  if hasattr(config, "password"):
-    connect_kwargs = {"password": config.password}
-  elif hasattr(config, "ssh_key"):
-    connect_kwargs = {"key_filename": config.ssh_key}
-  else:
-    password = getpass(f"Password for {config.hostname}: ")
-    if password:
-      connect_kwargs = {"password": password}
-    else:
-      connect_kwargs = None
-  conn = Connection(config.hostname, user=config.user, connect_kwargs=connect_kwargs)
-  try:
-    conn.open()
-    if conn.is_connected:
-      logging.info(f"Connection to {Fore.CYAN}{config.hostname}{Style.RESET_ALL} ESTABLISHED")
-  except:
-    logging.exception(f"Connection to {Fore.RED}{config.hostname}{Style.RESET_ALL} FAILED")
+  conn = connect_entry_node(config)
 
   # pack a tar ball for the current working directory
   # create a dirty branch for the current working tree
