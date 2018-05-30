@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import logging
 logging.basicConfig(level=logging.INFO, format='%(message)s')
+import os
 import os.path
 import json
 import click
@@ -209,6 +210,8 @@ def submit(c, sbatch_json, tensorboard, command):
           logging.info("Now forwarding the job output to terminal")
           conn.run(f"tail -f {config.untar_path}/{prefix}/slurm.err -f {config.untar_path}/{prefix}/slurm.out")
       except KeyboardInterrupt:
+        os.system("stty sane")
+        logging.info("Disconnecting from remote tensorboard")
         if click.confirm(f"Do you want to abort the job {job_id}?", default=False):
           conn.run(f"scancel {job_id}")
 
