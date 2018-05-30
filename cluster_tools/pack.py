@@ -8,7 +8,7 @@ def pack(name, branch):
   # check if the repo is clean
   repo = Repo("./", search_parent_directories=True)
   diff = repo.index.diff(None)
-  timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
+  timestamp = datetime.now().strftime('%Y%m%d.%H%M%S')
   branch_name = repo.active_branch.name
   if branch:
     branch_name = branch
