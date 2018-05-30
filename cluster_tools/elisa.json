@@ -2,7 +2,6 @@
     "hostname": "elisa1.iro.umontreal.ca",
     "user": "linmin",
     "activate_python": "source $HOME/.conda/envs/conda_env/bin/activate py36",
-    "ssh_key": "$HOME/.ssh/elisa_key",
     "tar_path": "/data/milatmp1/linmin/run/tar/",
     "untar_path": "/data/milatmp1/linmin/run/untar",
     "sbatch_options": {
