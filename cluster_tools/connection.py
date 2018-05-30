@@ -42,9 +42,8 @@ def connect_entry_node(config):
 def connect_node(config, node, gateway):
   """ Connect to the node the job is running using the entry node as a gateway
   """
-  connect_kwargs = _authenticate(config)
   try:
-    conn = Connection(node, user=config.user, gateway=gateway, connect_kwargs=connect_kwargs)
+    conn = Connection(node, user=config.user, gateway=gateway, connect_kwargs=gateway.connect_kwargs)
     conn.open()
     if conn.is_connected:
       logging.info(f"Connection to {Fore.CYAN}{node}{Style.RESET_ALL} through {Fore.CYAN}{gateway.host}{Style.RESET_ALL} ESTABLISHED")
