@@ -132,7 +132,7 @@ def submit(c, name, branch, sbatch_json, tensorboard, command):
   setup_python = [
       config.activate_python,
   ]
-  relative_dir = "../" * len(exec_path.split("/"))
+  relative_dir = "../" * len(list(filter(None, exec_path.split("/"))))
   install_dependency = [
       f"pip install -r {relative_dir}requirements.txt",
   ]
