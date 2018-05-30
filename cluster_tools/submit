@@ -104,15 +104,23 @@ def submit(c, sbatch_json, tensorboard, command):
 
   # create a connection to the remote machine.
   # from which the job will be submitted.
-  password = getpass(f"Password for {config.hostname}: ")
-  if password:
-    conn = Connection(config.hostname, user=config.user, connect_kwargs={"password": password})
+  if hasattr(config, "password"):
+    connect_kwargs = {"password": config.password}
   elif hasattr(config, "ssh_key"):
-    conn = Connection(config.hostname, user=config.user, connect_kwargs={"key_filename": config.ssh_key})
+    connect_kwargs = {"key_filename": config.ssh_key}
   else:
-    conn = Connection(config.hostname, user=config.user)
-  if conn.is_connected:
-    print(f"Connection to {Fore.CYAN}{config.hostname}{Style.RESET_ALL} established")
+    password = getpass(f"Password for {config.hostname}: ")
+    if password:
+      connect_kwargs = {"password": password}
+    else:
+      connect_kwargs = None
+  conn = Connection(config.hostname, user=config.user, connect_kwargs=connect_kwargs)
+  try:
+    conn.open()
+    if conn.is_connected:
+      logging.info(f"Connection to {Fore.CYAN}{config.hostname}{Style.RESET_ALL} ESTABLISHED")
+  except:
+    logging.exception(f"Connection to {Fore.RED}{config.hostname}{Style.RESET_ALL} FAILED")
 
   # pack a tar ball for the current working directory
   # create a dirty branch for the current working tree
