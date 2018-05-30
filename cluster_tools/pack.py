@@ -1,29 +1,40 @@
+import logging
+logging.basicConfig(level=logging.INFO, format='%(message)s')
 from git import Repo
 from datetime import datetime
 from invoke import run
 
-def pack():
+def pack(name, branch):
   # check if the repo is clean
   repo = Repo("./", search_parent_directories=True)
   diff = repo.index.diff(None)
   timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
   branch_name = repo.active_branch.name
+  if branch:
+    branch_name = branch
   relative_dir = repo.git.rev_parse(show_prefix=True)
   if len(diff) > 0:
     repo.git.add('-u')
     repo.index.commit(f"[dirty] commit {timestamp}")
-    name = f"{branch_name}-dirty-{timestamp}"
-    dirty_branch = repo.create_head(name, 'HEAD')
-    with open(f"{name}.tar", "wb") as f:
-      repo.archive(f, format="tar", prefix=f"{name}/")
+    ckpt_branch_name = f"{branch_name}.dirty/{timestamp}"
+    tar_name = f"{name}-{branch_name}.dirty-{timestamp}"
+    dirty_branch = repo.create_head(ckpt_branch_name, 'HEAD')
+    prefix = f"{name}/{branch_name}.dirty/{timestamp}/"
+    with open(f"{tar_name}.tar", "wb") as f:
+      repo.archive(f, format="tar", prefix=prefix)
     repo.head.reset("HEAD~1")
   else:
     sha = repo.git.rev_parse("HEAD", short=True)
-    name = f"{branch_name}-{sha}-{timestamp}"
-    with open(f"{name}.tar", "wb") as f:
-      repo.archive(f, format="tar", prefix=f"{name}/")
+    if branch_name != repo.active_branch.name:
+      ckpt_branch_name = f"{branch_name}.{sha}/{timestamp}"
+      repo.create_head(branch_name, 'HEAD')
+    tar_name = f"{name}-{branch_name}.{sha}-{timestamp}"
+    prefix = f"{name}/{branch_name}.{sha}/{timestamp}/"
+    with open(f"{tar_name}.tar", "wb") as f:
+      repo.archive(f, format="tar", prefix=prefix)
 
-  return f"{name}.tar", relative_dir
+  prefix += relative_dir
+  return f"{tar_name}.tar", prefix
 
 if __name__ == "__main__":
   print(pack())

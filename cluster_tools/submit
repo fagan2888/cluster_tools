@@ -95,11 +95,13 @@ def sbatch(conn):
 ))
 @click.option('-c', type=click.Path(exists=True),
               required=True, help="submit config to use")
+@click.option('--name', '-n', type=str, default="default", help="name of the project")
+@click.option('--branch', '-b', type=str, default="", help="branch name")
 @click.option('--sbatch_json', type=str, default="{}",
               help="extra json string to pass sbatch arguments")
 @click.option('--tensorboard', is_flag=True, default=True)
 @click.argument('command', nargs=-1, type=click.UNPROCESSED, required=True)
-def submit(c, sbatch_json, tensorboard, command):
+def submit(c, name, branch, sbatch_json, tensorboard, command):
   with open(click.format_filename(c), "r") as f:
     config = json.load(f, object_hook=lambda d: Namespace(**d))
 
@@ -126,9 +128,8 @@ def submit(c, sbatch_json, tensorboard, command):
   # pack a tar ball for the current working directory
   # create a dirty branch for the current working tree
   # if the repo is not clean
-  tarball, relative_dir = pack()
+  tarball, prefix = pack(name, branch)
   assert tarball.endswith(".tar")
-  prefix = tarball[:-4]
   logging.info(f"Tarball {Fore.CYAN}{tarball}{Style.RESET_ALL} created for the current repo")
 
   # prepare sbatch script and add to the tarball
@@ -165,7 +166,7 @@ def submit(c, sbatch_json, tensorboard, command):
   sbatch_script_name = f"/tmp/{uuid.uuid4().hex}"
   sbatch_script(conn, options, commands, sbatch_script_name, verbose=True)
   archive = tarfile.open(f"{tarball}", "a")
-  archive.add(sbatch_script_name, arcname=f"{prefix}/{relative_dir}/sbatch_script.sh")
+  archive.add(sbatch_script_name, arcname=f"{prefix}/sbatch_script.sh")
   archive.close()
 
   # copy the tarball created to the destination directory
