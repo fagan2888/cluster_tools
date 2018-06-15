@@ -190,19 +190,33 @@ def submit(c, name, branch, sbatch_json, tensorboard, command):
           sleep(5)
 
       logging.info(f"Tensorboard at port {port}")
-      try:
-        conn_node = connect_node(config, node, gateway=conn)
-        with conn_node.forward_local(local_port=int(port), remote_port=int(port),
-                                     local_host="localhost", remote_host="localhost"):
-          logging.info(f"Link to tensorboard {Fore.CYAN}http://localhost:{port}{Style.RESET_ALL}")
-          logging.info(f"{Fore.CYAN}Ctrl-C to terminate port forwarding{Style.RESET_ALL}")
-          logging.info("Now forwarding the job output to terminal")
-          conn.run(f"tail -f {config.untar_path}/{prefix}/{exec_path}/slurm.err -f {config.untar_path}/{prefix}/{exec_path}/slurm.out")
-      except KeyboardInterrupt:
-        os.system("stty sane")
-        logging.info("Disconnecting from remote tensorboard")
-        if click.confirm(f"Do you want to abort the job {job_id}?", default=False):
-          conn.run(f"scancel {job_id}")
+      while True:
+        try:
+          if not conn.is_connected:
+            conn.open()
+          with conn.forward_local(local_port=int(port), remote_port=int(port),
+                                  local_host="localhost", remote_host=node):
+          # conn_node = connect_node(config, node, gateway=conn)
+          # with conn_node.forward_local(local_port=int(port), remote_port=int(port),
+          #                              local_host="localhost", remote_host="localhost"):
+            logging.info(f"forwarding local port to {node}")
+            logging.info(f"Link to tensorboard {Fore.CYAN}http://localhost:{port}{Style.RESET_ALL}")
+            logging.info(f"{Fore.CYAN}Ctrl-C to terminate port forwarding{Style.RESET_ALL}")
+            logging.info("Now forwarding the job output to terminal")
+            conn.run(f"tail -f {config.untar_path}/{prefix}/{exec_path}/slurm.err -f {config.untar_path}/{prefix}/{exec_path}/slurm.out")
+
+        except KeyboardInterrupt:
+          os.system("stty sane")
+          logging.info("Disconnecting from remote tensorboard")
+          if click.confirm(f"Do you want to abort the job {job_id}?", default=False):
+            if not conn.is_connected:
+              conn.open()
+            conn.run(f"scancel {job_id}")
+            break
+
+        except Exception as e:
+          logging.info("Reconnecting ... ")
+          continue
 
 if __name__ == "__main__":
   submit()
