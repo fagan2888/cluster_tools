@@ -206,7 +206,7 @@ def submit(c, name, branch, sbatch_json, tensorboard, command):
             logging.info("Now forwarding the job output to terminal")
             conn.run(f"tail -f {config.untar_path}/{prefix}/{exec_path}/slurm.err -f {config.untar_path}/{prefix}/{exec_path}/slurm.out", pty=True)
 
-        except KeyboardInterrupt:
+        except Exception as e:
           os.system("stty sane")
           logging.info("\nDisconnecting from remote tensorboard")
           if click.confirm(f"Do you want to abort the job {job_id}?", default=False):
@@ -214,10 +214,9 @@ def submit(c, name, branch, sbatch_json, tensorboard, command):
               conn.open()
             conn.run(f"scancel {job_id}")
             break
-
-        except Exception as e:
-          logging.info("Reconnecting ... ")
-          continue
+          else:
+            logging.info("Reconnecting ... ")
+            continue
 
         finally:
           conn.close()
