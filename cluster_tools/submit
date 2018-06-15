@@ -35,6 +35,7 @@ def sbatch_script(conn, options, commands, sbatch_script_name, verbose=True):
       f.write(f"#SBATCH {k} {v}\n")
     for command in commands:
       f.write(f"{command}\n")
+    f.write("wait\n")
   with open(sbatch_script_name, "r") as f:
     print_if_verbose(f"{Fore.CYAN}==== SBATCH SCRIPT ====\n")
     print_if_verbose(f.read() + f"{Style.RESET_ALL}")
