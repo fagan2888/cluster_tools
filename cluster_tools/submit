@@ -219,5 +219,8 @@ def submit(c, name, branch, sbatch_json, tensorboard, command):
           logging.info("Reconnecting ... ")
           continue
 
+        finally:
+          conn.close()
+
 if __name__ == "__main__":
   submit()
