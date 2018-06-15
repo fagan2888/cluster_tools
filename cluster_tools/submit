@@ -181,6 +181,7 @@ def submit(c, name, branch, sbatch_json, tensorboard, command):
       node, job_id = sbatch(conn)
       if not node:
         return
+      logging.info(f"Job submitted to node {node}")
       # launch tensorboard
       while True:
         try:
