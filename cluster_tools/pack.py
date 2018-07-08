@@ -1,18 +1,20 @@
 import logging
 logging.basicConfig(level=logging.INFO, format='%(message)s')
 from git import Repo
+from git.cmd import Git
 from datetime import datetime
 from invoke import run
 
 def pack(name, branch):
   # check if the repo is clean
   repo = Repo("./", search_parent_directories=True)
+  git_cmd = Git("./")
   diff = repo.index.diff(None)
   timestamp = datetime.now().strftime('%Y%m%d.%H%M%S')
   branch_name = repo.active_branch.name
   if branch:
     branch_name = branch
-  exec_path = repo.git.rev_parse(show_prefix=True)
+  exec_path = git_cmd.rev_parse(show_prefix=True)
   if len(diff) > 0:
     repo.git.add('-u')
     repo.index.commit(f"[dirty] commit {timestamp}")
@@ -24,7 +26,7 @@ def pack(name, branch):
       repo.archive(f, format="tar", prefix=f"{prefix}/")
     repo.head.reset("HEAD~1")
   else:
-    sha = repo.git.rev_parse("HEAD", short=True)
+    sha = git_cmd.rev_parse("HEAD", short=True)
     if branch_name != repo.active_branch.name:
       ckpt_branch_name = f"{branch_name}.{sha}/{timestamp}"
       repo.create_head(branch_name, 'HEAD')
