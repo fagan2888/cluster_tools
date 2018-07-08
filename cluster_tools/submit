@@ -135,7 +135,7 @@ def submit(c, name, branch, sbatch_json, tensorboard, command):
   ]
   relative_dir = "../" * len(list(filter(None, exec_path.split("/"))))
   install_dependency = [
-      f"pip install -r {relative_dir}requirements.txt",
+      f"pip install -r {relative_dir}requirements.txt --upgrade",
   ]
   tensorboard_cmd = [
       """PORT=$(python -c 'import socket; s=socket.socket(socket.AF_INET, socket.SOCK_STREAM); s.bind(("localhost",0)); print(s.getsockname()[1])')""",
