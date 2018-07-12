@@ -8,6 +8,7 @@ import click
 import uuid
 import invoke
 from fabric import Connection
+from invoke import Context, Responder
 from cluster_tools.pack import pack
 from time import sleep
 from colorama import Style, Fore
@@ -190,36 +191,31 @@ def submit(c, name, branch, sbatch_json, tensorboard, command):
         except:
           sleep(5)
 
+      context = Context()
       logging.info(f"Tensorboard at port {port}")
       while True:
         try:
-          if not conn.is_connected:
-            conn.open()
-          with conn.forward_local(local_port=int(port), remote_port=int(port),
-                                  local_host="localhost", remote_host=node):
-          # conn_node = connect_node(config, node, gateway=conn)
-          # with conn_node.forward_local(local_port=int(port), remote_port=int(port),
-          #                              local_host="localhost", remote_host="localhost"):
-            logging.info(f"forwarding local port to {node}")
-            logging.info(f"Link to tensorboard {Fore.CYAN}http://localhost:{port}{Style.RESET_ALL}")
-            logging.info(f"{Fore.CYAN}Ctrl-C to terminate port forwarding{Style.RESET_ALL}")
-            logging.info("Now forwarding the job output to terminal")
-            conn.run(f"tail -f {config.untar_path}/{prefix}/{exec_path}/slurm.err -f {config.untar_path}/{prefix}/{exec_path}/slurm.out", pty=True)
+          logging.info(f"forwarding local port to {node}")
+          logging.info(f"Link to tensorboard {Fore.CYAN}http://localhost:{port}{Style.RESET_ALL}")
+          logging.info(f"{Fore.CYAN}Ctrl-C to terminate port forwarding{Style.RESET_ALL}")
+          logging.info("Now forwarding the job output to terminal")
+          r = Responder(pattern=r".* password:", response=(conn.connect_kwargs.get("password", "") + "\n"))
+          context.run(f"ssh -o 'StrictHostKeyChecking=no' -o 'UserKnownHostsFile=/dev/null' -J {conn.user}@{conn.host} -L localhost:{port}:localhost:{port} {conn.user}@{node} tail -f {config.untar_path}/{prefix}/{exec_path}/slurm.err -f {config.untar_path}/{prefix}/{exec_path}/slurm.out", watchers=[r], pty=True)
 
         except Exception as e:
-          os.system("stty sane")
-          logging.info("\nDisconnecting from remote tensorboard")
-          if click.confirm(f"Do you want to abort the job {job_id}?", default=False):
-            if not conn.is_connected:
-              conn.open()
-            conn.run(f"scancel {job_id}")
-            break
-          else:
-            logging.info("Reconnecting ... ")
-            continue
+          logging.info(e)
 
-        finally:
+        logging.info("\nDisconnecting from remote tensorboard")
+        if click.confirm(f"Do you want to abort the job {job_id}?", default=False):
+          if not conn.is_connected:
+            conn.open()
+          conn.run(f"scancel {job_id}")
           conn.close()
+          break
+        else:
+          logging.info("Reconnecting ... ")
+          continue
+
 
 if __name__ == "__main__":
   submit()
