@@ -200,7 +200,7 @@ def submit(c, name, branch, sbatch_json, tensorboard, command):
           logging.info(f"{Fore.CYAN}Ctrl-C to terminate port forwarding{Style.RESET_ALL}")
           logging.info("Now forwarding the job output to terminal")
           r = Responder(pattern=r".* password:", response=(conn.connect_kwargs.get("password", "") + "\n"))
-          context.run(f"ssh -o 'StrictHostKeyChecking=no' -o 'UserKnownHostsFile=/dev/null' -J {conn.user}@{conn.host} -L localhost:{port}:localhost:{port} {conn.user}@{node} tail -n +1 -f {config.untar_path}/{prefix}/{exec_path}/slurm.err -f {config.untar_path}/{prefix}/{exec_path}/slurm.out", watchers=[r], pty=True)
+          context.run(f"ssh -o 'StrictHostKeyChecking=no' -o 'UserKnownHostsFile=/dev/null' -J {conn.user}@{conn.host} -L localhost:{port}:localhost:{port} {conn.user}@{node}", watchers=[r], pty=True)
 
         except Exception as e:
           logging.info(e)
