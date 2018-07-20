@@ -207,8 +207,8 @@ def submit(c, name, branch, sbatch_json, tensorboard, command):
 
         logging.info("\nDisconnecting from remote tensorboard")
         if click.confirm(f"Do you want to abort the job {job_id}?", default=False):
-          if not conn.is_connected:
-            conn.open()
+          conn.close()
+          conn.open()
           conn.run(f"scancel {job_id}")
           conn.close()
           break
